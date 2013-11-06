@@ -47,9 +47,9 @@ public class SAP {
             }
         assert ancestor != -1;
 
-        int temp = bfdpv.distTo(ancestor) + bfdpw.distTo(ancestor);
-        if (len == -1 || temp < len)
-            return temp;
+        int tempLen = bfdpv.distTo(ancestor) + bfdpw.distTo(ancestor);
+        if (len == -1 || tempLen < len)
+            return tempLen;
         else
             return len;
     }
@@ -67,11 +67,11 @@ public class SAP {
         if (bfdpv.hasPathTo(w)) {
             len = bfdpv.distTo(w);
             ancestor = w;
-        } else if (bfdpw.hasPathTo(v)) {
+        }
+        if (bfdpw.hasPathTo(v)) {
             len = bfdpv.distTo(v);
             ancestor = v;
-        } else
-            assert false;
+        }
 
         // find length of indirect path
         int tempAncestor = -1;
@@ -85,7 +85,7 @@ public class SAP {
         assert tempAncestor != -1;
 
         int tempLen = bfdpv.distTo(tempAncestor) + bfdpw.distTo(tempAncestor);
-        if (tempLen < len)
+        if (len == -1 || tempLen < len)
             return tempAncestor;
         else
             return ancestor;
