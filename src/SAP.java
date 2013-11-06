@@ -1,9 +1,11 @@
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Queue;
 
 public class SAP {
     private Digraph G;
     private int root;
-    private int v, w; // used for caching
+    // private int v, w; // used for caching
 
     // constructor takes a digraph (not necessarily a DAG)
     public SAP(Digraph G) {
@@ -30,10 +32,8 @@ public class SAP {
         int len = -1;
         if (bfdpv.hasPathTo(w))
             len = bfdpv.distTo(w);
-        else if (bfdpw.hasPathTo(v))
+        if (bfdpw.hasPathTo(v))
             len = bfdpv.distTo(v);
-        else
-            assert false;
 
         // find length of indirect path
         int ancestor = -1;
@@ -93,23 +93,35 @@ public class SAP {
     // length of shortest ancestral path between any vertex in v and any vertex
     // in w; -1 if no such path
     public int length(Iterable<Integer> v, Iterable<Integer> w) {
-        return 0;
+        int min = Integer.MAX_VALUE;
+
+        for (Integer iw : w) {
+            for (Integer iv : v) {
+                int len = length(iv, iw);
+                if (len < min)
+                    min = len;
+            }
+        }
+
+        return min;
     }
 
     // a common ancestor that participates in shortest ancestral path; -1 if no
     // such path
     public int ancestor(Iterable<Integer> v, Iterable<Integer> w) {
-        int ancester = -1;
-        Stack<Integer> stack = new Stack<Integer>();
-
-        for (Integer iw : w)
-            stack.push(iw);
+        Queue<Integer> queue = new LinkedList<Integer>();
         for (Integer iv : v)
-            if (iv.equals(stack.peek())) {
-                ancester = stack.pop();
-            }
+            queue.add(iv);
+        for (Integer iw : w)
+            queue.add(iw);
 
-        return ancester;
+        while (queue.size() > 1) {
+            Integer a = queue.poll();
+            Integer b = queue.poll();
+            queue.add(ancestor(a, b));
+        }
+
+        return queue.poll();
     }
 
     // for unit testing of this class (such as the one below)
