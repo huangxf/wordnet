@@ -5,6 +5,7 @@ import java.util.Queue;
 public class SAP {
     private Digraph G;
     private int root;
+
     // private int v, w; // used for caching
 
     // constructor takes a digraph (not necessarily a DAG)
@@ -47,7 +48,7 @@ public class SAP {
         assert ancestor != -1;
 
         int temp = bfdpv.distTo(ancestor) + bfdpw.distTo(ancestor);
-        if (temp < len)
+        if (len == -1 || temp < len)
             return temp;
         else
             return len;

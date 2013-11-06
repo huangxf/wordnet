@@ -10,7 +10,7 @@ public class Outcast {
 
     // given an array of WordNet nouns, return an outcast
     public String outcast(String[] nouns) {
-        int outcast = -1;
+        int outcastDegree = -1;
         int index = -1;
         for (int i = 0; i < nouns.length; i++) {
             int dist = 0;
@@ -18,8 +18,8 @@ public class Outcast {
                 if (i != j)
                     dist += wordnet.distance(nouns[i], nouns[j]);
             }
-            if (outcast < dist) {
-                outcast = dist;
+            if (outcastDegree < dist) {
+                outcastDegree = dist;
                 index = i;
             }
         }
