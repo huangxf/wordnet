@@ -24,6 +24,8 @@ public class Outcast {
             }
         }
 
+        if (index == -1)
+            System.out.println();
         return nouns[index];
     }
 

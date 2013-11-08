@@ -2,12 +2,15 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
 public class WordNet {
-    private Map<String, Integer> noun2index;
+    private Map<String, List<Integer>> noun2indexes;
+
     private Map<Integer, String> index2synset;
     private SAP sap;
     private Set<String> nouns;
@@ -15,9 +18,9 @@ public class WordNet {
     // constructor takes the name of the two input files
     public WordNet(String synsets, String hypernyms) throws IOException {
         nouns = new HashSet<String>();
-        noun2index = new HashMap<String, Integer>();
+        noun2indexes = new HashMap<String, List<Integer>>();
         index2synset = new HashMap<Integer, String>();
-        int v = 0;
+        int max = -1;
         Scanner vertexScanner = new Scanner(new File(synsets));
 
         while (vertexScanner.hasNext()) {
@@ -26,13 +29,20 @@ public class WordNet {
             String synset = components[1];
             for (String noun : synset.split(" ")) {
                 nouns.add(noun);
-                noun2index.put(noun, index);
+                if (noun2indexes.containsKey(noun))
+                    noun2indexes.get(noun).add(index);
+                else {
+                    List<Integer> tmp = new LinkedList<Integer>();
+                    tmp.add(index);
+                    noun2indexes.put(noun, tmp);
+                }
             }
-            v++;
+            if (index > max)
+                max = index;
         }
         vertexScanner.close();
 
-        Digraph G = new Digraph(v);
+        Digraph G = new Digraph(max + 1);
         Scanner edgesScanner = new Scanner(new File(hypernyms));
         while (edgesScanner.hasNext()) {
             String[] vertexes = edgesScanner.nextLine().split(",");
@@ -61,7 +71,7 @@ public class WordNet {
         if (!isNoun(nounA) || !isNoun(nounB))
             throw new IllegalArgumentException();
 
-        int v = noun2index.get(nounA), w = noun2index.get(nounB);
+        List<Integer> v = noun2indexes.get(nounA), w = noun2indexes.get(nounB);
         return sap.length(v, w);
     }
 
@@ -71,12 +81,15 @@ public class WordNet {
         if (!isNoun(nounA) || !isNoun(nounB))
             throw new IllegalArgumentException();
 
-        int v = noun2index.get(nounA), w = noun2index.get(nounB);
+        List<Integer> v = noun2indexes.get(nounA), w = noun2indexes.get(nounB);
         int ancestor = sap.ancestor(v, w);
         return index2synset.get(ancestor);
     }
 
     // for unit testing of this class
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        WordNet wordnet = new WordNet("./data/synsets.txt",
+                "./data/hypernyms.txt");
+        System.out.println(wordnet.distance("municipality", "region"));
     }
 }
