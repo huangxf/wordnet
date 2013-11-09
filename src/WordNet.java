@@ -21,12 +21,13 @@ public class WordNet {
         noun2indexes = new HashMap<String, List<Integer>>();
         index2synset = new HashMap<Integer, String>();
         int max = -1;
-        Scanner vertexScanner = new Scanner(new File(synsets));
+        Scanner vertexScanner = new Scanner(new File(synsets), "UTF-8");
 
         while (vertexScanner.hasNext()) {
             String[] components = vertexScanner.nextLine().split(",");
             Integer index = Integer.parseInt(components[0]);
             String synset = components[1];
+            index2synset.put(index, synset);
             for (String noun : synset.split(" ")) {
                 nouns.add(noun);
                 if (noun2indexes.containsKey(noun))
@@ -43,7 +44,7 @@ public class WordNet {
         vertexScanner.close();
 
         Digraph G = new Digraph(max + 1);
-        Scanner edgesScanner = new Scanner(new File(hypernyms));
+        Scanner edgesScanner = new Scanner(new File(hypernyms), "UTF-8");
         while (edgesScanner.hasNext()) {
             String[] vertexes = edgesScanner.nextLine().split(",");
             for (int i = 1; i < vertexes.length; i++)

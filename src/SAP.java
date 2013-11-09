@@ -6,7 +6,10 @@ public class SAP {
     private Digraph G;
     private int root;
 
-    // private int v, w; // used for caching
+    private int vCached, wCached; // used for caching
+    private int ancestorCached, lengthCached; // used for caching
+    //private BreadthFirstDirectedPaths pathV;
+    //private BreadthFirstDirectedPaths pathW;
 
     // constructor takes a digraph (not necessarily a DAG)
     public SAP(Digraph G) {
@@ -27,45 +30,9 @@ public class SAP {
         if (!(0 <= v && v < G.V() && 0 <= w && w < G.V()))
             throw new IndexOutOfBoundsException();
 
-        // find length of direct path
-        BreadthFirstDirectedPaths pathV = new BreadthFirstDirectedPaths(G, v);
-        BreadthFirstDirectedPaths pathW = new BreadthFirstDirectedPaths(G, w);
-        int directLen = -1;
-        if (pathV.hasPathTo(w))
-            directLen = pathV.distTo(w);
-        if (pathW.hasPathTo(v))
-            directLen = pathV.distTo(v);
-
-        // find length of indirect path
-        int indirectLen = -1, indirectAncestor = -1;
-        BreadthFirstDirectedPaths rootNode = new BreadthFirstDirectedPaths(
-                G.reverse(), root);
-        if (rootNode.hasPathTo(v) && rootNode.hasPathTo(w)) {
-            Iterator<Integer> iterRoot2V = rootNode.pathTo(v).iterator();
-            Iterator<Integer> iterRoot2W = rootNode.pathTo(w).iterator();
-            while (iterRoot2V.hasNext() && iterRoot2W.hasNext()) {
-                Integer iv = iterRoot2V.next();
-                Integer iw = iterRoot2W.next();
-                if (!iv.equals(iw))
-                    break;
-                indirectAncestor = iv;
-            }
-            assert indirectAncestor != -1;
-            indirectLen = pathV.distTo(indirectAncestor)
-                    + pathW.distTo(indirectAncestor);
+        if (vCached == v && wCached == w || vCached == w && wCached == v) {
+            return lengthCached;
         }
-
-        if (directLen != -1 && directLen < indirectLen)
-            return directLen;
-        else
-            return indirectLen;
-    }
-
-    // a common ancestor of v and w that participates in a shortest ancestral
-    // path; -1 if no such path
-    public int ancestor(int v, int w) {
-        if (!(0 <= v && v < G.V() && 0 <= w && w < G.V()))
-            throw new IndexOutOfBoundsException();
 
         // find length of direct path
         BreadthFirstDirectedPaths pathV = new BreadthFirstDirectedPaths(G, v);
@@ -88,9 +55,9 @@ public class SAP {
             Iterator<Integer> iterRoot2V = rootNode.pathTo(v).iterator();
             Iterator<Integer> iterRoot2W = rootNode.pathTo(w).iterator();
             while (iterRoot2V.hasNext() && iterRoot2W.hasNext()) {
-                Integer iv = iterRoot2V.next();
-                Integer iw = iterRoot2W.next();
-                if (!iv.equals(iw))
+                int iv = iterRoot2V.next();
+                int iw = iterRoot2W.next();
+                if (iv != iw)
                     break;
                 indirectAncestor = iv;
             }
@@ -99,10 +66,75 @@ public class SAP {
                     + pathW.distTo(indirectAncestor);
         }
 
-        if (directLen != -1 && directLen < indirectLen)
-            return directAncestor;
-        else
-            return indirectAncestor;
+        // cache query
+        vCached = v;
+        wCached = w;
+
+        if (directLen != -1 && directLen < indirectLen) {
+            lengthCached = directLen;
+            ancestorCached = directAncestor;
+        } else {
+            lengthCached = indirectLen;
+            ancestorCached = indirectAncestor;
+        }
+
+        return this.lengthCached;
+    }
+
+    // a common ancestor of v and w that participates in a shortest ancestral
+    // path; -1 if no such path
+    public int ancestor(int v, int w) {
+        if (!(0 <= v && v < G.V() && 0 <= w && w < G.V()))
+            throw new IndexOutOfBoundsException();
+
+        if (vCached == v && wCached == w || vCached == w && wCached == v) {
+            return ancestorCached;
+        }
+
+        // find length of direct path
+        BreadthFirstDirectedPaths pathV = new BreadthFirstDirectedPaths(G, v);
+        BreadthFirstDirectedPaths pathW = new BreadthFirstDirectedPaths(G, w);
+        int directLen = -1, directAncestor = -1;
+        if (pathV.hasPathTo(w)) {
+            directLen = pathV.distTo(w);
+            directAncestor = w;
+        }
+        if (pathW.hasPathTo(v)) {
+            directLen = pathV.distTo(v);
+            directAncestor = v;
+        }
+
+        // find length of indirect path
+        int indirectLen = -1, indirectAncestor = -1;
+        BreadthFirstDirectedPaths rootNode = new BreadthFirstDirectedPaths(
+                G.reverse(), root);
+        if (rootNode.hasPathTo(v) && rootNode.hasPathTo(w)) {
+            Iterator<Integer> iterRoot2V = rootNode.pathTo(v).iterator();
+            Iterator<Integer> iterRoot2W = rootNode.pathTo(w).iterator();
+            while (iterRoot2V.hasNext() && iterRoot2W.hasNext()) {
+                int iv = iterRoot2V.next();
+                int iw = iterRoot2W.next();
+                if (iv != iw)
+                    break;
+                indirectAncestor = iv;
+            }
+            assert indirectAncestor != -1;
+            indirectLen = pathV.distTo(indirectAncestor)
+                    + pathW.distTo(indirectAncestor);
+        }
+
+        // cache query
+        vCached = v;
+        wCached = w;
+        if (directLen != -1 && directLen < indirectLen) {
+            lengthCached = directLen;
+            ancestorCached = directAncestor;
+        } else {
+            lengthCached = indirectLen;
+            ancestorCached = indirectAncestor;
+        }
+
+        return ancestorCached;
     }
 
     // length of shortest ancestral path between any vertex in v and any vertex
@@ -110,8 +142,15 @@ public class SAP {
     public int length(Iterable<Integer> v, Iterable<Integer> w) {
         int min = Integer.MAX_VALUE;
 
-        for (Integer iw : w) {
-            for (Integer iv : v) {
+        // for (Integer iw : w)
+        // if (!(0 <= iw && iw < G.V()))
+        // throw new IndexOutOfBoundsException();
+        // for (Integer iv : v)
+        // if (!(0 <= iv && iv < G.V()))
+        // throw new IndexOutOfBoundsException();
+
+        for (int iw : w) {
+            for (int iv : v) {
                 int len = length(iv, iw);
                 if (len < min)
                     min = len;
@@ -125,14 +164,14 @@ public class SAP {
     // such path
     public int ancestor(Iterable<Integer> v, Iterable<Integer> w) {
         Queue<Integer> queue = new LinkedList<Integer>();
-        for (Integer iv : v)
+        for (int iv : v)
             queue.add(iv);
-        for (Integer iw : w)
+        for (int iw : w)
             queue.add(iw);
 
         while (queue.size() > 1) {
-            Integer a = queue.poll();
-            Integer b = queue.poll();
+            int a = queue.poll();
+            int b = queue.poll();
             queue.add(ancestor(a, b));
         }
 
