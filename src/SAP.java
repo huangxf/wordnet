@@ -3,151 +3,70 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 public class SAP {
-    private Digraph G;
-    private int root;
-
-    private int vCached, wCached; // used for caching
-    private int ancestorCached, lengthCached; // used for caching
-    //private BreadthFirstDirectedPaths pathV;
-    //private BreadthFirstDirectedPaths pathW;
+    private Digraph digraph;
+    private Graph graph;
 
     // constructor takes a digraph (not necessarily a DAG)
     public SAP(Digraph G) {
-        this.G = new Digraph(G);
-
-        // calculate the root's index
-        Outer: for (int i = 0; i < G.V(); i++) {
-            Iterator<Integer> iter = G.adj(i).iterator();
-            while (!iter.hasNext()) {
-                root = i;
-                break Outer;
+        this.digraph = new Digraph(G);
+        graph = new Graph(digraph.V());
+        for (int i = 0; i < digraph.V(); i++) {
+            Iterator<Integer> neighbors = digraph.adj(i).iterator();
+            while (neighbors.hasNext()) {
+                int neighbor = neighbors.next();
+                graph.addEdge(i, neighbor);
+                graph.addEdge(neighbor, i);
             }
         }
     }
 
     // length of shortest ancestral path between v and w; -1 if no such path
     public int length(int v, int w) {
-        if (!(0 <= v && v < G.V() && 0 <= w && w < G.V()))
-            throw new IndexOutOfBoundsException();
-
-        if (vCached == v && wCached == w || vCached == w && wCached == v) {
-            return lengthCached;
-        }
-
-        // find length of direct path
-        BreadthFirstDirectedPaths pathV = new BreadthFirstDirectedPaths(G, v);
-        BreadthFirstDirectedPaths pathW = new BreadthFirstDirectedPaths(G, w);
-        int directLen = -1, directAncestor = -1;
-        if (pathV.hasPathTo(w)) {
-            directLen = pathV.distTo(w);
-            directAncestor = w;
-        }
-        if (pathW.hasPathTo(v)) {
-            directLen = pathV.distTo(v);
-            directAncestor = v;
-        }
-
-        // find length of indirect path
-        int indirectLen = -1, indirectAncestor = -1;
-        BreadthFirstDirectedPaths rootNode = new BreadthFirstDirectedPaths(
-                G.reverse(), root);
-        if (rootNode.hasPathTo(v) && rootNode.hasPathTo(w)) {
-            Iterator<Integer> iterRoot2V = rootNode.pathTo(v).iterator();
-            Iterator<Integer> iterRoot2W = rootNode.pathTo(w).iterator();
-            while (iterRoot2V.hasNext() && iterRoot2W.hasNext()) {
-                int iv = iterRoot2V.next();
-                int iw = iterRoot2W.next();
-                if (iv != iw)
-                    break;
-                indirectAncestor = iv;
-            }
-            assert indirectAncestor != -1;
-            indirectLen = pathV.distTo(indirectAncestor)
-                    + pathW.distTo(indirectAncestor);
-        }
-
-        // cache query
-        vCached = v;
-        wCached = w;
-
-        if (directLen != -1 && directLen < indirectLen) {
-            lengthCached = directLen;
-            ancestorCached = directAncestor;
-        } else {
-            lengthCached = indirectLen;
-            ancestorCached = indirectAncestor;
-        }
-
-        return this.lengthCached;
+        int ancestor = ancestor(v, w);
+        BreadthFirstDirectedPaths searchFromV = new BreadthFirstDirectedPaths(
+                digraph, v);
+        BreadthFirstDirectedPaths searchFromW = new BreadthFirstDirectedPaths(
+                digraph, w);
+        return searchFromV.distTo(ancestor) + searchFromW.distTo(ancestor);
     }
 
     // a common ancestor of v and w that participates in a shortest ancestral
     // path; -1 if no such path
     public int ancestor(int v, int w) {
-        if (!(0 <= v && v < G.V() && 0 <= w && w < G.V()))
+        if (!(0 <= v && v < digraph.V() && 0 <= w && w < digraph.V()))
             throw new IndexOutOfBoundsException();
 
-        if (vCached == v && wCached == w || vCached == w && wCached == v) {
-            return ancestorCached;
-        }
+        BreadthFirstPaths search = new BreadthFirstPaths(graph, v);
+        if (!search.hasPathTo(w))
+            return -1;
 
-        // find length of direct path
-        BreadthFirstDirectedPaths pathV = new BreadthFirstDirectedPaths(G, v);
-        BreadthFirstDirectedPaths pathW = new BreadthFirstDirectedPaths(G, w);
-        int directLen = -1, directAncestor = -1;
-        if (pathV.hasPathTo(w)) {
-            directLen = pathV.distTo(w);
-            directAncestor = w;
-        }
-        if (pathW.hasPathTo(v)) {
-            directLen = pathV.distTo(v);
-            directAncestor = v;
-        }
+        BreadthFirstDirectedPaths searchFromV = new BreadthFirstDirectedPaths(
+                digraph, v);
+        BreadthFirstDirectedPaths searchFromW = new BreadthFirstDirectedPaths(
+                digraph, w);
 
-        // find length of indirect path
-        int indirectLen = -1, indirectAncestor = -1;
-        BreadthFirstDirectedPaths rootNode = new BreadthFirstDirectedPaths(
-                G.reverse(), root);
-        if (rootNode.hasPathTo(v) && rootNode.hasPathTo(w)) {
-            Iterator<Integer> iterRoot2V = rootNode.pathTo(v).iterator();
-            Iterator<Integer> iterRoot2W = rootNode.pathTo(w).iterator();
-            while (iterRoot2V.hasNext() && iterRoot2W.hasNext()) {
-                int iv = iterRoot2V.next();
-                int iw = iterRoot2W.next();
-                if (iv != iw)
-                    break;
-                indirectAncestor = iv;
+        int ancestor = -1, minDist = Integer.MAX_VALUE;
+        for (Iterator<Integer> paths = search.pathTo(w).iterator(); paths
+                .hasNext();) {
+            int innerVertex = paths.next();
+            if (searchFromV.hasPathTo(innerVertex)
+                    && searchFromW.hasPathTo(innerVertex)) {
+                int dist = searchFromV.distTo(innerVertex)
+                        + searchFromW.distTo(innerVertex);
+                if (minDist > dist) {
+                    minDist = dist;
+                    ancestor = innerVertex;
+                }
             }
-            assert indirectAncestor != -1;
-            indirectLen = pathV.distTo(indirectAncestor)
-                    + pathW.distTo(indirectAncestor);
         }
 
-        // cache query
-        vCached = v;
-        wCached = w;
-        if (directLen != -1 && directLen < indirectLen) {
-            lengthCached = directLen;
-            ancestorCached = directAncestor;
-        } else {
-            lengthCached = indirectLen;
-            ancestorCached = indirectAncestor;
-        }
-
-        return ancestorCached;
+        return ancestor;
     }
 
     // length of shortest ancestral path between any vertex in v and any vertex
     // in w; -1 if no such path
     public int length(Iterable<Integer> v, Iterable<Integer> w) {
         int min = Integer.MAX_VALUE;
-
-        // for (Integer iw : w)
-        // if (!(0 <= iw && iw < G.V()))
-        // throw new IndexOutOfBoundsException();
-        // for (Integer iv : v)
-        // if (!(0 <= iv && iv < G.V()))
-        // throw new IndexOutOfBoundsException();
 
         for (int iw : w) {
             for (int iv : v) {
@@ -180,7 +99,7 @@ public class SAP {
 
     // for unit testing of this class (such as the one below)
     public static void main(String[] args) {
-        In in = new In("./wordnet-testing/wordnet/digraph6.txt");
+        In in = new In("./wordnet-testing/wordnet/digraph5.txt");
         Digraph G = new Digraph(in);
         SAP sap = new SAP(G);
         while (!StdIn.isEmpty()) {

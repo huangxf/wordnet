@@ -25,7 +25,7 @@ public class WordNet {
 
         while (vertexScanner.hasNext()) {
             String[] components = vertexScanner.nextLine().split(",");
-            Integer index = Integer.parseInt(components[0]);
+            int index = Integer.parseInt(components[0]);
             String synset = components[1];
             index2synset.put(index, synset);
             for (String noun : synset.split(" ")) {
