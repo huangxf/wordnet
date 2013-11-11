@@ -16,13 +16,13 @@ public class Outcast {
         int N = nouns.length;
         int[][] distMatrix = new int[N][N];
         for (int i = 0; i < N; i++)
-            Arrays.fill(distMatrix[i], -1);
+            Arrays.fill(distMatrix[i], Integer.MIN_VALUE);
 
         for (int i = 0; i < nouns.length; i++) {
             int dist = 0;
             for (int j = 0; j < nouns.length; j++) {
                 if (i != j) {
-                    if (distMatrix[j][i] != -1)
+                    if (distMatrix[j][i] != Integer.MIN_VALUE)
                         dist += distMatrix[j][i];
                     else {
                         int tmp = wordnet.distance(nouns[i], nouns[j]);

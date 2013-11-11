@@ -2,6 +2,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -43,18 +44,34 @@ public class WordNet {
         }
         vertexScanner.close();
 
-        Digraph G = new Digraph(max + 1);
+        Digraph digraph = new Digraph(max + 1);
         Scanner edgesScanner = new Scanner(new File(hypernyms), "UTF-8");
         while (edgesScanner.hasNext()) {
             String[] vertexes = edgesScanner.nextLine().split(",");
             for (int i = 1; i < vertexes.length; i++)
-                G.addEdge(Integer.parseInt(vertexes[0]),
+                digraph.addEdge(Integer.parseInt(vertexes[0]),
                         Integer.parseInt(vertexes[i]));
 
         }
         edgesScanner.close();
 
-        sap = new SAP(G);
+        // check if the digraph is a single rooted DAG
+        int rootCount = 0;
+        for (int i = 0; i < digraph.V(); i++) {
+            Iterator<Integer> neighbors = digraph.adj(i).iterator();
+            while (!neighbors.hasNext()) {
+                rootCount++;
+                break;
+            }
+            if (rootCount > 1)
+                throw new IllegalArgumentException();
+        }
+
+        DirectedCycle cycleFinder = new DirectedCycle(digraph);
+        if (cycleFinder.hasCycle())
+            throw new IllegalArgumentException();
+
+        sap = new SAP(digraph);
     }
 
     // the set of nouns (no duplicates), returned as an Iterable
@@ -89,8 +106,8 @@ public class WordNet {
 
     // for unit testing of this class
     public static void main(String[] args) throws IOException {
-        WordNet wordnet = new WordNet("./data/synsets.txt",
-                "./data/hypernyms.txt");
-        System.out.println(wordnet.distance("municipality", "region"));
+        WordNet wordnet = new WordNet("./wordnet-testing/wordnet/synsets3.txt",
+                "./wordnet-testing/wordnet/hypernymsInvalidTwoRoots.txt");
+        System.out.println(wordnet.distance("Brown_Swiss", "barrel_roll"));
     }
 }
