@@ -23,6 +23,9 @@ public class SAP {
     // length of shortest ancestral path between v and w; -1 if no such path
     public int length(int v, int w) {
         int ancestor = ancestor(v, w);
+        if (ancestor == -1)
+            return -1;
+
         BreadthFirstDirectedPaths searchFromV = new BreadthFirstDirectedPaths(
                 digraph, v);
         BreadthFirstDirectedPaths searchFromW = new BreadthFirstDirectedPaths(
@@ -99,7 +102,7 @@ public class SAP {
 
     // for unit testing of this class (such as the one below)
     public static void main(String[] args) {
-        In in = new In("./wordnet-testing/wordnet/digraph5.txt");
+        In in = new In("./wordnet-testing/wordnet/digraph1.txt");
         Digraph G = new Digraph(in);
         SAP sap = new SAP(G);
         while (!StdIn.isEmpty()) {
